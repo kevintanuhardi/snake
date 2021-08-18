@@ -18,12 +18,12 @@
 	box-sizing: border-box;
 }
 
-.shooter {
-	background-color: green;
+.snake {
+	background-color: #6CBB3C;
 }
 
-.invader {
-	background-color: purple;
+.food {
+	background-color: orange;
 	border-radius: 10px;
 }
 

@@ -2,20 +2,14 @@ const grid = document.querySelector('.grid')
 const resultDisplay = document.querySelector('.result')
 
 let result = 0;
-let invadersIntervalId
+let snakeIntervalId
 let currentShooterIndex = 202;
 const gridWidth = 15;
 const gridCount = 225;
-const invaderDimensions = {
-	height: 3,
-	width: 10
-}
-let goingRight = true;
-let currentInvaderIndex = 0;
-
-let invaderIndex = [];
-// position to currentInvaderIndex
-let invaderRemoved = [];
+let snakeHeadCurrentPosition = 105
+const snakeInitialLength = 2
+let snakePosition = [107, 106]
+let direction = 'right'
 
 for (let i = 0; i < gridCount; i++) {
   const square = document.createElement('div')
@@ -24,124 +18,126 @@ for (let i = 0; i < gridCount; i++) {
 
 const squares = Array.from(document.querySelectorAll('.grid div'))
 
-function drawInvader() {
-	for (let i = 0; i < invaderDimensions.height; i++) {
-		for(let j = 0; j < invaderDimensions.width; j++) {
-			// console.log('inv', invaderRemoved);
-			
-			invaderIndex.push(currentInvaderIndex + (i * gridWidth) + j )
-		}
-	}
-	for(let i = 0; i < invaderIndex.length; i++) {
-		if (invaderRemoved.indexOf(i) !== - 1) continue;
-		squares[invaderIndex[i]].classList.add('invader')
+function drawSnake() {
+	for(let i = 0; i < snakePosition.length; i++) {
+		squares[snakePosition[i]].classList.add('snake')
 	}
 }
 
-drawInvader()
+drawSnake()
 
-function removeInvader() {
-	for(let i = 0; i < invaderIndex.length; i++) {
-		squares[invaderIndex[i]].classList.remove('invader')
-	}
-	invaderIndex = []
-}
+function moveSnake() {
+	const tailPosition = snakePosition[snakePosition.length-1]
+	const headPosition = snakePosition[0]
+	let newHeadPosition
 
-function moveInvaders() {
-	const isOnLeftWall = currentInvaderIndex % gridWidth === 0
-	const isOnRightWall = (currentInvaderIndex + invaderDimensions.width - 1) % gridWidth === gridWidth - 1
-	removeInvader()
-	if (isOnLeftWall) console.log(isOnLeftWall, 'leftWall');
-	if (isOnRightWall) console.log(isOnRightWall, 'rightwall');
+	switch (direction) {
+		case 'right':
+			if(headPosition % gridWidth === gridWidth - 1) {
+				newHeadPosition = Math.floor(headPosition / gridWidth) * gridWidth
+			} else {
+				newHeadPosition = snakePosition[0] + 1
+			}
+			break;
+		case 'left':
+			if(headPosition % gridWidth === 0) {
+				newHeadPosition = ((Math.floor(headPosition / gridWidth) + 1) * gridWidth) - 1
+			} else {
+				newHeadPosition = snakePosition[0] - 1
+			}
+			break;
+		case 'up':
+			if(headPosition < gridWidth) {
+				newHeadPosition = headPosition + (gridWidth * (gridWidth -1))
+			} else {
+				newHeadPosition = snakePosition[0] - gridWidth 
+			}
+			break;
+		case 'down':
+			if(headPosition >= (gridWidth * (gridWidth -1))) {
+				newHeadPosition = headPosition - (gridWidth * (gridWidth -1))
+			} else {
+				newHeadPosition = snakePosition[0] + gridWidth 
+			}
+			break;
 	
-
-	if ((isOnLeftWall && !goingRight) || (isOnRightWall && goingRight)) {
-		//move the invaders down
-		goingRight = !goingRight
-		currentInvaderIndex += gridWidth
-	} else if (goingRight) {
-		currentInvaderIndex += 1
-	} else {
-		currentInvaderIndex -= 1	
+		default:
+			break;
 	}
 
-	if (squares[currentShooterIndex].classList.contains('invader', 'shooter')) {
-    resultDisplay.innerHTML = 'GAME OVER'
-    clearInterval(invadersIntervalId)
-  }
-
-	if(currentInvaderIndex + (3 * gridWidth) > (squares.length)) {
+	if(squares[newHeadPosition].classList.contains('snake')) {
 		resultDisplay.innerHTML = 'GAME OVER'
-		clearInterval(invadersIntervalId)
+		clearInterval(snakeIntervalId)
+		return null
+	}
+	if(squares[newHeadPosition].classList.contains('food')) {	
+		squares[newHeadPosition].classList.remove('food')
+		drawFood()
+		result++
+		resultDisplay.innerHTML = result
+	} else {
+		squares[tailPosition].classList.remove('snake')
+		snakePosition.splice(-1, 1)
+
 	}
 
-  if (invaderRemoved.length === invaderDimensions.width * invaderDimensions.height) {
-    resultDisplay.innerHTML = 'YOU WIN'
-    clearInterval(invadersIntervalId)
-  }
-
-	drawInvader()
-}
-
-invadersIntervalId = setInterval(moveInvaders, 600)
-
-
-squares[currentShooterIndex].classList.add('shooter')
-
-function moveShooter(e) {
-	squares[currentShooterIndex].classList.remove('shooter')
-	switch (e.code) {
-		case "ArrowLeft":
-			if (currentShooterIndex % gridWidth !== 0) currentShooterIndex -= 1
-			break;
-		case "ArrowRight":
-			if (currentShooterIndex % gridWidth !== gridWidth -1) currentShooterIndex += 1
-			break;
 	
-		default:
-			break;
-	}
-	squares[currentShooterIndex].classList.add('shooter')
+	snakePosition.splice(0, 0, newHeadPosition)
+	squares[snakePosition[0]].classList.add('snake')
 }
+moveSnake()
 
-function shoot(e) {
-	let laserId
-	let currentLaserIndex = currentShooterIndex
-	// console.log(currentLaserIndex, 'curlas')
-	function moveLaser() {
-		squares[currentLaserIndex].classList.remove('laser')
-		currentLaserIndex -= gridWidth
-		if (!squares[currentLaserIndex]) {
-			clearInterval(laserId)
-			return null
-		}
-		squares[currentLaserIndex].classList.add('laser')
+snakeIntervalId = setInterval(moveSnake, 300)
 
-		if (squares[currentLaserIndex].classList.contains('invader')) {
-			result += 1
-			resultDisplay.innerHTML = result
-			squares[currentLaserIndex].classList.remove('invader')
-			squares[currentLaserIndex].classList.remove('laser')
-			console.log(currentLaserIndex)
-			squares[currentLaserIndex].classList.add('boom')
-			clearInterval(laserId)
-			setTimeout(() => {
-				squares[currentLaserIndex].classList.remove('boom')	
-			}, 300);
-
-			// invaderRemoved.push(currentLaserIndex - currentInvaderIndex)
-			invaderRemoved.push(invaderIndex.indexOf(currentLaserIndex))
-		}
-	} 
+function changeDirection(e) {
 	switch (e.code) {
-		case 'Space':
-			laserId = setInterval(moveLaser, 100)
-			break;
-	
-		default:
-			break;
-	}
+				case "ArrowLeft":
+					if(direction !== 'right') direction = 'left'
+					break;
+				case "ArrowRight":
+					if(direction !== 'left') direction = 'right'
+					break;
+				case "ArrowUp":
+					if(direction !== 'down') direction = 'up'
+					break;
+				case "ArrowDown":
+					if(direction !== 'up') direction = 'down'
+					break;
+
+				default:
+					break;
+			}
 }
 
-document.addEventListener('keydown', moveShooter)
-document.addEventListener('keydown', shoot)
+function drawFood() {
+	let foodPosition
+	do {
+		foodPosition = Math.floor(Math.random() * (gridCount - 1))
+	} while (snakePosition.indexOf(foodPosition) !== -1) 
+	squares[foodPosition].classList.add('food')
+}
+
+drawFood()
+
+document.addEventListener('keydown', changeDirection)
+
+
+// function moveShooter(e) {
+// 	squares[currentShooterIndex].classList.remove('shooter')
+// 	switch (e.code) {
+// 		case "ArrowLeft":
+// 			if (currentShooterIndex % gridWidth !== 0) currentShooterIndex -= 1
+// 			break;
+// 		case "ArrowRight":
+// 			if (currentShooterIndex % gridWidth !== gridWidth -1) currentShooterIndex += 1
+// 			break;
+	
+// 		default:
+// 			break;
+// 	}
+// 	squares[currentShooterIndex].classList.add('shooter')
+// }
+
+
+// document.addEventListener('keydown', moveShooter)
+
